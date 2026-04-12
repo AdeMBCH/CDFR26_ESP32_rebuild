@@ -1,0 +1,20 @@
+idf_component_register(
+    SRCS
+        "../src/main.cpp"
+        "../src/ros_app.cpp"
+        "../src/led_manager.cpp"
+        "../src/otos_node.cpp"
+        "../src/can_driver.c"
+        "../src/can_rx_dispatch.c"
+        "../src/motor_node.c"
+        "../src/homing_node.c"
+        "../src/servo.c"
+        "../src/phase_node.c"
+        "../src/esp32_serial_transport.c"
+        "../src/led_strip_encoder.c"
+    INCLUDE_DIRS
+        "."
+        "../include"
+    REQUIRES
+        micro_ros_espidf_component
+)
