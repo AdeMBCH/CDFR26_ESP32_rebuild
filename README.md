@@ -1,58 +1,56 @@
 # CDFR26 ESP32 rebuild
 
-## Build (recommended)
+## Build
 
-Use the wrapper script instead of the OS `pio` binary:
+Lancer le build via le wrapper du projet :
 
 ```bash
 ./scripts/pio_run.sh esp32-s3-devkitm-1
 ```
 
-This script isolates PlatformIO in a local virtual environment (`.venv-pio`) so Ubuntu/Debian packaged PlatformIO versions do not break the project.
+Ce script prépare automatiquement l'environnement local du projet :
 
-## Why this wrapper exists
+- création du venv `.venv-pio`
+- installation de PlatformIO 6.x
+- correction de compatibilité `empy==3.3.4` pour ESP-IDF / micro-ROS
+- initialisation des submodules `components/micro_ros_espidf_component` et `components/SparkFun_Qwiic_OTOS_ESP32_Library`
+- rebuild forcé de micro-ROS si les artefacts générés sont incomplets ou pas en transport `custom`
 
-On Ubuntu 24.04+, `apt install platformio` currently installs a legacy PlatformIO (`4.3.4`) that crashes with Python 3.12 (`resultcallback` / `result_callback` mismatch).
+La bibliothèque SparkFun OTOS reste utilisée depuis `components/SparkFun_Qwiic_OTOS_ESP32_Library/`.
 
-The wrapper script automatically:
+## Flash
 
-1. detects when a usable PlatformIO is unavailable,
-2. recreates a clean local `.venv-pio`,
-3. installs PlatformIO 6.x,
-4. runs the requested build environment.
-
-## Quick troubleshooting
-
-### 1) `./scripts/pio_run.sh: No such file or directory`
-
-You are likely not in the repository root. Run:
+Pour builder puis flasher :
 
 ```bash
-cd /path/to/CDFR26_ESP32_rebuild
-./scripts/pio_run.sh esp32-s3-devkitm-1
+./scripts/pio_run.sh esp32-s3-devkitm-1 -t upload
 ```
 
-### 2) Build fails with `Couldn't find the main target of the project!`
+Le wrapper détecte automatiquement le port série USB de l'ESP32 si une seule carte compatible est branchée.
 
-Check that these project files exist and were not removed:
-
-- `CMakeLists.txt`
-- `main/CMakeLists.txt`
-- `src/main.cpp`
-
-Then clean and rebuild:
+Si plusieurs ports sont présents, préciser le port :
 
 ```bash
-rm -rf .pio
-./scripts/pio_run.sh esp32-s3-devkitm-1 -t clean
-./scripts/pio_run.sh esp32-s3-devkitm-1
+./scripts/pio_run.sh esp32-s3-devkitm-1 -t upload --upload-port /dev/ttyACM0
 ```
 
-### 3) Virtualenv/site-packages metadata warnings
+## Notes micro-ROS
 
-If `.venv-pio` became corrupted, remove it and rerun:
+Le transport micro-ROS est forcé en `custom` via [app-colcon.meta](/home/adembch/Documents/PlatformIO/Projects/CDFR26_ESP32_rebuild/app-colcon.meta).
+
+Les broches UART utilisées par le transport série custom sont définies dans [include/config.h](/home/adembch/Documents/PlatformIO/Projects/CDFR26_ESP32_rebuild/include/config.h).
+
+## Nettoyage complet
+
+Si vous voulez régénérer entièrement l'environnement de build :
 
 ```bash
-rm -rf .venv-pio
+rm -rf .pio .venv-pio \
+  components/micro_ros_espidf_component/include \
+  components/micro_ros_espidf_component/libmicroros.a \
+  components/micro_ros_espidf_component/micro_ros_dev \
+  components/micro_ros_espidf_component/micro_ros_src \
+  components/micro_ros_espidf_component/esp32_toolchain.cmake
+
 ./scripts/pio_run.sh esp32-s3-devkitm-1
 ```

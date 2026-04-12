@@ -2,3 +2,7 @@
 	path = components/micro_ros_espidf_component
 	url = https://github.com/micro-ROS/micro_ros_espidf_component.git
 	branch = humble
+[submodule "components/SparkFun_Qwiic_OTOS_ESP32_Library"]
+	path = components/SparkFun_Qwiic_OTOS_ESP32_Library
+	url = https://github.com/FIPATECH/SparkFun_Qwiic_OTOS_ESP32_Library.git
+	branch = main

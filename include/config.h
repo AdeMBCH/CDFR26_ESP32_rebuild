@@ -34,6 +34,10 @@
 // ---------------------------------------------------------------------------
 #define UROS_UART_PORT          UART_NUM_0
 #define UROS_UART_BAUD          921600
+#define UROS_UART_TX_PIN        GPIO_NUM_43
+#define UROS_UART_RX_PIN        GPIO_NUM_44
+#define UROS_UART_RTS_PIN       UART_PIN_NO_CHANGE
+#define UROS_UART_CTS_PIN       UART_PIN_NO_CHANGE
 
 // ---------------------------------------------------------------------------
 // TWAI (CAN Bus) — TJA1050 transceiver
