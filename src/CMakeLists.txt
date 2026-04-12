@@ -12,5 +12,9 @@ idf_component_register(
         "phase_node.c"
         "esp32_serial_transport.c"
         "led_strip_encoder.c"
-    INCLUDE_DIRS "."
+    INCLUDE_DIRS
+        "."
+        "../include"
+    REQUIRES
+        micro_ros_espidf_component
 )
