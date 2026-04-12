@@ -40,10 +40,15 @@ else
     echo "[pio] python3 -m platformio not available, creating local venv"
     rm -rf "${VENV_DIR}"
     python3 -m venv "${VENV_DIR}"
-    "${VENV_DIR}/bin/python" -m pip install --upgrade pip
-    "${VENV_DIR}/bin/python" -m pip install 'platformio>=6.1,<7'
+    PIP_DISABLE_PIP_VERSION_CHECK=1 "${VENV_DIR}/bin/python" -m pip install --upgrade pip setuptools wheel
+    PIP_DISABLE_PIP_VERSION_CHECK=1 "${VENV_DIR}/bin/python" -m pip install --upgrade --force-reinstall --no-cache-dir 'platformio>=6.1,<7'
   fi
   PIO_RUNNER=("${VENV_DIR}/bin/pio")
+fi
+
+if [[ ! -f "${REPO_ROOT}/platformio.ini" ]]; then
+  echo "[pio] platformio.ini not found in ${REPO_ROOT}. Are you in the correct repository checkout?" >&2
+  exit 2
 fi
 
 "${PIO_RUNNER[@]}" run -e "${BUILD_ENV}" "$@"
