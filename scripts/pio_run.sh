@@ -11,6 +11,7 @@ if [[ $# -gt 0 ]]; then
 fi
 
 cd "${REPO_ROOT}"
+VENV_DIR="${REPO_ROOT}/.venv-pio"
 
 has_modern_platformio() {
   python3 - <<'PY'
@@ -35,12 +36,14 @@ PY
 if has_modern_platformio; then
   PIO_RUNNER=(python3 -m platformio)
 else
-  echo "[pio] python3 -m platformio not available, creating local venv"
-  python3 -m venv .venv-pio
-  . .venv-pio/bin/activate
-  python -m pip install --upgrade pip
-  python -m pip install 'platformio>=6.1,<7'
-  PIO_RUNNER=(python -m platformio)
+  if [[ ! -x "${VENV_DIR}/bin/pio" ]] || ! "${VENV_DIR}/bin/pio" --version >/dev/null 2>&1; then
+    echo "[pio] python3 -m platformio not available, creating local venv"
+    rm -rf "${VENV_DIR}"
+    python3 -m venv "${VENV_DIR}"
+    "${VENV_DIR}/bin/python" -m pip install --upgrade pip
+    "${VENV_DIR}/bin/python" -m pip install 'platformio>=6.1,<7'
+  fi
+  PIO_RUNNER=("${VENV_DIR}/bin/pio")
 fi
 
 "${PIO_RUNNER[@]}" run -e "${BUILD_ENV}" "$@"
