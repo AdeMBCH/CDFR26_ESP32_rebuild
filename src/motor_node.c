@@ -38,6 +38,10 @@
 #include "esp_timer.h"
 #include <inttypes.h>
 
+#include <math.h>
+
+#define MOTOR_REARM_EPS 1e-3
+
 /** Stop omni wheels if no /motor_commands received within this duration (ms). */
 #define MOTOR_WATCHDOG_MS  300
 
@@ -89,6 +93,41 @@ static int omni_idx(uint8_t id)
 static inline uint8_t motor_acc(uint8_t id)
 {
     return (omni_idx(id) >= 0) ? MKS_ACC_OMNI : MKS_ACC_MECHANISM;
+}
+
+static esp_err_t omni_resume_rearm(uint8_t id, double new_omega)
+{
+    int idx = omni_idx(id);
+    if (idx < 0) return ESP_OK;  // pas une roue omni
+    if (fabs(new_omega) < MOTOR_REARM_EPS) return ESP_OK;  // pas une reprise
+    if (fabs(s_omni_omega[idx]) >= MOTOR_REARM_EPS) return ESP_OK;  // moteur déjà en mouvement
+
+    bool stalled = false;
+    esp_err_t st = mks_get_stall_status(id, &stalled, 25);
+
+    if (st == ESP_OK && stalled) {
+        ESP_LOGW(TAG, "Omni motor %u stalled after idle, releasing stall", (unsigned)id);
+        esp_err_t rel = mks_release_stall(id);
+        if (rel != ESP_OK) {
+            ESP_LOGE(TAG, "release_stall failed for motor %u: %s",
+                     (unsigned)id, esp_err_to_name(rel));
+            return rel;
+        }
+    } else if (st != ESP_OK) {
+        // On force quand même un re-enable si la lecture d'état n'a pas répondu.
+        ESP_LOGW(TAG, "stall status unavailable for motor %u: %s; forcing enable",
+                 (unsigned)id, esp_err_to_name(st));
+    }
+
+    esp_err_t en = mks_set_enable(id, true);
+    if (en != ESP_OK) {
+        ESP_LOGE(TAG, "re-enable failed for motor %u: %s",
+                 (unsigned)id, esp_err_to_name(en));
+        return en;
+    }
+
+    ESP_LOGI(TAG, "Omni motor %u re-armed before resume", (unsigned)id);
+    return ESP_OK;
 }
 
 /* ── Omni timer callback — fires at MOTOR_OMNI_PERIOD_MS ─────────────────── */
@@ -156,8 +195,12 @@ static void motor_cmd_callback(const void *msg_in)
 
         int idx = omni_idx(id);
         if (idx >= 0) {
-            /* Omni wheels: send immediately for low latency, and update the
-             * target so the keep-alive timer can re-send it periodically. */
+            esp_err_t rearm_err = omni_resume_rearm(id, omega);
+            if (rearm_err != ESP_OK) {
+                ESP_LOGW(TAG, "Re-arm sequence failed for omni motor %u: %s",
+                        (unsigned)id, esp_err_to_name(rearm_err));
+            }
+
             esp_err_t err = mks_send_speed_rads(id, omega, MKS_ACC_OMNI);
             if (err != ESP_OK) {
                 ESP_LOGE(TAG, "CAN send failed for omni motor %u omega=%.3f: %s",
