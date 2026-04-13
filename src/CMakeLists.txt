@@ -6,7 +6,7 @@ idf_component_register(
         "otos_node.cpp"
         "can_driver.c"
         "can_rx_dispatch.c"
-        "motor_node.c"
+       
         "homing_node.c"
         "servo.c"
         "phase_node.c"
