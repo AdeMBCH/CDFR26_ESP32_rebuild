@@ -1,68 +1,68 @@
 #include <uxr/client/transport.h>
 
-#include <driver/uart.h>
-#include <driver/gpio.h>
+#include <driver/usb_serial_jtag.h>
 #include <esp_log.h>
 #include "config.h"
 
-static const char *TAG = "UART_TRANSPORT";
-
-#define UART_TXD  (UROS_UART_TX_PIN)
-#define UART_RXD  (UROS_UART_RX_PIN)
-#define UART_RTS  (UROS_UART_RTS_PIN)
-#define UART_CTS  (UROS_UART_CTS_PIN)
+static const char *TAG = "USB_TRANSPORT";
 
 // --- micro-ROS Transports ---
-#define UART_BUFFER_SIZE (512)
+#define USB_BUFFER_SIZE (512)
 
 bool esp32_serial_open(struct uxrCustomTransport * transport){
-    size_t * uart_port = (size_t*) transport->args;
+    (void)transport;
 
-    ESP_LOGI(TAG, "Opening UART%d: TX=%d, RX=%d, Baudrate=%d", *uart_port, UART_TXD, UART_RXD, UROS_UART_BAUD);
+    ESP_LOGI(TAG, "Opening USB Serial/JTAG transport at host baudrate %d", UROS_SERIAL_BAUD);
 
-    uart_config_t uart_config = {
-        .baud_rate = UROS_UART_BAUD,
-        .data_bits = UART_DATA_8_BITS,
-        .parity    = UART_PARITY_DISABLE,
-        .stop_bits = UART_STOP_BITS_1,
-        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+    if (usb_serial_jtag_is_driver_installed()) {
+        ESP_LOGI(TAG, "USB Serial/JTAG driver already installed");
+        return true;
+    }
+
+    usb_serial_jtag_driver_config_t usb_config = {
+        .tx_buffer_size = USB_BUFFER_SIZE,
+        .rx_buffer_size = USB_BUFFER_SIZE,
     };
 
-    if (uart_param_config(*uart_port, &uart_config) == ESP_FAIL) {
-        ESP_LOGE(TAG, "Failed to configure UART parameters");
-        return false;
-    }
-    if (uart_set_pin(*uart_port, UART_TXD, UART_RXD, UART_RTS, UART_CTS) == ESP_FAIL) {
-        ESP_LOGE(TAG, "Failed to set UART pins");
-        return false;
-    }
-    if (uart_driver_install(*uart_port, UART_BUFFER_SIZE * 2, 0, 0, NULL, 0) == ESP_FAIL) {
-        ESP_LOGE(TAG, "Failed to install UART driver");
+    if (usb_serial_jtag_driver_install(&usb_config) != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to install USB Serial/JTAG driver");
         return false;
     }
 
-    ESP_LOGI(TAG, "UART%d opened successfully", *uart_port);
+    ESP_LOGI(TAG, "USB Serial/JTAG transport opened successfully");
     return true;
 }
 
 bool esp32_serial_close(struct uxrCustomTransport * transport){
-    size_t * uart_port = (size_t*) transport->args;
+    (void)transport;
 
-    return uart_driver_delete(*uart_port) == ESP_OK;
+    if (!usb_serial_jtag_is_driver_installed()) {
+        return true;
+    }
+
+    return usb_serial_jtag_driver_uninstall() == ESP_OK;
 }
 
 size_t esp32_serial_write(struct uxrCustomTransport* transport, const uint8_t * buf, size_t len, uint8_t * err){
-    size_t * uart_port = (size_t*) transport->args;
-    const int txBytes = uart_write_bytes(*uart_port, (const char*) buf, len);
-    //ESP_LOGD(TAG, "Wrote %d/%d bytes", txBytes, len);
-    return txBytes;
+    (void)transport;
+    if (err != NULL) {
+        *err = 0;
+    }
+
+    const int tx_bytes = usb_serial_jtag_write_bytes(buf, len, pdMS_TO_TICKS(100));
+    if (tx_bytes > 0) {
+        usb_serial_jtag_wait_tx_done(pdMS_TO_TICKS(100));
+    }
+    return tx_bytes > 0 ? (size_t)tx_bytes : 0U;
 }
 
 size_t esp32_serial_read(struct uxrCustomTransport* transport, uint8_t* buf, size_t len, int timeout, uint8_t* err){
-    size_t * uart_port = (size_t*) transport->args;
-    const int rxBytes = uart_read_bytes(*uart_port, buf, len, timeout / portTICK_PERIOD_MS);
-    /*if (rxBytes > 0) {
-        ESP_LOGD(TAG, "Read %d bytes", rxBytes);
-    }*/
-    return rxBytes;
+    (void)transport;
+    if (err != NULL) {
+        *err = 0;
+    }
+
+    TickType_t ticks_to_wait = timeout > 0 ? pdMS_TO_TICKS(timeout) : 0;
+    const int rx_bytes = usb_serial_jtag_read_bytes(buf, len, ticks_to_wait);
+    return rx_bytes > 0 ? (size_t)rx_bytes : 0U;
 }

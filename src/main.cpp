@@ -28,8 +28,7 @@ static const char *TAG = "main";
 
 extern "C" void app_main(void)
 {
-    ESP_LOGI(TAG, "microROS OTOS ESP32-S3 — starting (ROS 2 Humble, UART%d transport)",
-             (int)UROS_UART_PORT);
+    ESP_LOGI(TAG, "microROS OTOS ESP32-S3 — starting (ROS 2 Humble, USB serial transport)");
 
     // --- LED ---
     led_manager_init();
@@ -38,11 +37,10 @@ extern "C" void app_main(void)
     xTaskCreate(led_task, "led_task",
                 LED_TASK_STACK_SIZE, NULL, LED_TASK_PRIORITY, NULL);
 
-    // --- microROS UART transport ---
-    static size_t uart_port = UROS_UART_PORT;
+    // --- microROS USB serial transport ---
     rmw_uros_set_custom_transport(
         true,
-        (void *)&uart_port,
+        NULL,
         esp32_serial_open,
         esp32_serial_close,
         esp32_serial_write,

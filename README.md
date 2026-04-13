@@ -38,7 +38,7 @@ Si plusieurs ports sont présents, préciser le port :
 
 Le transport micro-ROS est forcé en `custom` via [app-colcon.meta](/home/adembch/Documents/PlatformIO/Projects/CDFR26_ESP32_rebuild/app-colcon.meta).
 
-Les broches UART utilisées par le transport série custom sont définies dans [include/config.h](/home/adembch/Documents/PlatformIO/Projects/CDFR26_ESP32_rebuild/include/config.h).
+Sur l'ESP32-S3 de ce projet, le transport custom passe par l'USB série natif (`/dev/ttyACM*` côté hôte), avec un baudrate hôte fixé à `921600` dans [include/config.h](/home/adembch/Documents/PlatformIO/Projects/CDFR26_ESP32_rebuild/include/config.h).
 
 ## Nettoyage complet
 

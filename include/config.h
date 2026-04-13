@@ -30,14 +30,11 @@
 #define TIMER_PERIOD_MS         (1000 / PUBLISH_FREQUENCY_HZ)
 
 // ---------------------------------------------------------------------------
-// microROS UART transport  (pins come from sdkconfig)
+// microROS serial transport
 // ---------------------------------------------------------------------------
-#define UROS_UART_PORT          UART_NUM_0
-#define UROS_UART_BAUD          921600
-#define UROS_UART_TX_PIN        GPIO_NUM_43
-#define UROS_UART_RX_PIN        GPIO_NUM_44
-#define UROS_UART_RTS_PIN       UART_PIN_NO_CHANGE
-#define UROS_UART_CTS_PIN       UART_PIN_NO_CHANGE
+// The ESP32-S3 talks to the host over the native USB Serial/JTAG device.
+// Keep the host-side agent at 921600 so launch files and tooling stay aligned.
+#define UROS_SERIAL_BAUD        921600
 
 // ---------------------------------------------------------------------------
 // TWAI (CAN Bus) — TJA1050 transceiver
