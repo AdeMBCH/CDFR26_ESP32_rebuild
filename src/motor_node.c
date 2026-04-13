@@ -264,7 +264,21 @@ esp_err_t motor_node_init(rcl_node_t *node, rclc_executor_t *executor,
         ESP_LOGE(TAG, "Failed to add omni timer to executor: %d", (int)rc);
         return ESP_FAIL;
     }
-
+    /* après reboot/reset dans tous les cas MKS s'active dès le départ */
+    const uint8_t ids[4] = {
+        MOTOR_OMNI_FL, MOTOR_OMNI_FR,
+        MOTOR_OMNI_RL, MOTOR_OMNI_RR,
+    };
+    for (int i = 0; i < 4; i++) {
+        esp_err_t err = mks_set_enable(ids[i], true);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to enable omni motor %u: %s",
+                     (unsigned)ids[i], esp_err_to_name(err));
+        } else {
+            ESP_LOGI(TAG, "Enabled omni motor %u", (unsigned)ids[i]);
+        }
+    }
+    
     ESP_LOGI(TAG, "motor_node ready — sub: /motor_commands  pub: /motor_states"
                   "  omni timer: %d ms (%d Hz)",
              MOTOR_OMNI_PERIOD_MS, 1000 / MOTOR_OMNI_PERIOD_MS);
