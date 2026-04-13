@@ -119,8 +119,11 @@ void micro_ros_task(void *arg)
         ESP_LOGI(TAG, "Spinning …");
 
         /** Ping the agent every N ms to detect disconnection. */
-        static const uint32_t AGENT_PING_INTERVAL_MS = 2000;
+        static const uint32_t AGENT_PING_INTERVAL_MS = 5000;
+        static const int MAX_MISSED_PINGS = 3;
+
         TickType_t last_ping_tick = xTaskGetTickCount();
+        int missed_pings = 0;
 
         bool agent_ok = true;
         while (agent_ok) {
@@ -128,12 +131,19 @@ void micro_ros_task(void *arg)
 
             TickType_t now = xTaskGetTickCount();
             if ((now - last_ping_tick) * portTICK_PERIOD_MS >= AGENT_PING_INTERVAL_MS) {
-                if (rmw_uros_ping_agent(200, 1) != RMW_RET_OK) {
-                    ESP_LOGW(TAG, "Agent ping failed — agent lost");
-                    agent_ok = false;
+                if (rmw_uros_ping_agent(1000, 3) != RMW_RET_OK) {
+                    missed_pings++;
+                    ESP_LOGW(TAG, "Agent ping failed (%d/%d)", missed_pings, MAX_MISSED_PINGS);
+                    if (missed_pings >= MAX_MISSED_PINGS) {
+                        ESP_LOGW(TAG, "Agent considered lost after repeated ping failures");
+                        agent_ok = false;
+                    }
+                } else {
+                    missed_pings = 0;
                 }
                 last_ping_tick = now;
             }
+
             taskYIELD();
         }
 

@@ -117,7 +117,11 @@ static void omni_timer_callback(rcl_timer_t *timer, int64_t last_call_time)
         MOTOR_OMNI_RL, MOTOR_OMNI_RR,
     };
     for (int i = 0; i < 4; i++) {
-        mks_send_speed_rads(ids[i], s_omni_omega[i], MKS_ACC_OMNI);
+        esp_err_t err = mks_send_speed_rads(ids[i], s_omni_omega[i], MKS_ACC_OMNI);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "CAN keepalive failed for omni motor %u omega=%.3f: %s",
+                    (unsigned)ids[i], s_omni_omega[i], esp_err_to_name(err));
+        }
     }
 }
 
@@ -154,11 +158,19 @@ static void motor_cmd_callback(const void *msg_in)
         if (idx >= 0) {
             /* Omni wheels: send immediately for low latency, and update the
              * target so the keep-alive timer can re-send it periodically. */
-            mks_send_speed_rads(id, omega, MKS_ACC_OMNI);
+            esp_err_t err = mks_send_speed_rads(id, omega, MKS_ACC_OMNI);
+            if (err != ESP_OK) {
+                ESP_LOGE(TAG, "CAN send failed for omni motor %u omega=%.3f: %s",
+                        (unsigned)id, omega, esp_err_to_name(err));
+            }
             s_omni_omega[idx] = omega;
         } else {
             /* Mechanism motors: send immediately */
-            mks_send_speed_rads(id, omega, acc);
+            esp_err_t err = mks_send_speed_rads(id, omega, acc);
+            if (err != ESP_OK) {
+                ESP_LOGE(TAG, "CAN send failed for motor %u omega=%.3f: %s",
+                        (unsigned)id, omega, esp_err_to_name(err));
+            }
 
 #if MOTOR_AUTO_MIRROR
             /* Symmetric pairs: slave receives the inverted velocity */
@@ -167,7 +179,11 @@ static void motor_cmd_callback(const void *msg_in)
             else if (id == MOTOR_STORAGE_MASTER) slave_id = MOTOR_STORAGE_SLAVE;
 
             if (slave_id != 0) {
-                mks_send_speed_rads(slave_id, -omega, acc);
+                esp_err_t err_slave = mks_send_speed_rads(slave_id, -omega, acc);
+                if (err_slave != ESP_OK) {
+                    ESP_LOGE(TAG, "CAN send failed for slave motor %u omega=%.3f: %s",
+                            (unsigned)slave_id, -omega, esp_err_to_name(err_slave));
+                }
                 if (states_idx + 1 < 32) {
                     s_states_buf[states_idx++] = (double)slave_id;
                     s_states_buf[states_idx++] = -omega;
