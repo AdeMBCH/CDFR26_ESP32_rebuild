@@ -230,8 +230,8 @@ esp_err_t otos_node_register(rcl_node_t *node, rclc_executor_t *executor,
     s_odom_msg.header.frame_id.size     = strlen("odom");
     s_odom_msg.header.frame_id.capacity = s_odom_msg.header.frame_id.size + 1;
 
-    s_odom_msg.child_frame_id.data     = (char *)"base_link";
-    s_odom_msg.child_frame_id.size     = strlen("base_link");
+    s_odom_msg.child_frame_id.data     = (char *)"otos_link";
+    s_odom_msg.child_frame_id.size     = strlen("otos_link");
     s_odom_msg.child_frame_id.capacity = s_odom_msg.child_frame_id.size + 1;
 
     // ── Timer ────────────────────────────────────────────────────────────────
